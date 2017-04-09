@@ -24,6 +24,12 @@ displaying coindesk bpi BTCUSD
 - connect your smartphone/computer to ESPxxxxxx wifi
 - enter your home wifi settings at the captive portal
 
+## known issues
+
+- compilation error in LedControl.h:  
+solution: comment out or delete pgmspace.h include
+
+
 ## TODO
 
 * ! correct level-shifting to 5V (3.3V is out of spec, but works anyway)
