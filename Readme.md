@@ -16,9 +16,13 @@ displaying coindesk bpi BTCUSD
 * dupont cables (female-to-male) and a cheap antenna ;)
 
 
-## how to flash
-1) upload source sketch with arduino IDE
-2) or flash binary with [esptool (python)](https://github.com/espressif/esptool) or [flash download tools (WIN)](https://espressif.com/en/support/download/other-tools) @ address 0x0
+## how to install
+- flash the board
+  * upload source sketch with arduino IDE
+  * or flash binary with [esptool (python)](https://github.com/espressif/esptool) or [flash download tools (WIN)](https://espressif.com/en/support/download/other-tools) @ address 0x0
+- connect board to power 
+- connect your smartphone/computer to ESPxxxxxx wifi
+- enter your home wifi settings at the captive portal
 
 ## TODO
 
