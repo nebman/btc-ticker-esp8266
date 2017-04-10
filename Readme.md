@@ -15,6 +15,15 @@ displaying coindesk bpi BTCUSD
 * 7 segment display with MAX7219 ([link](https://www.aliexpress.com/wholesale?catId=0&initiative_id=SB_20170409112750&SearchText=max7219+display))
 * dupont cables (female-to-male) and a cheap antenna ;)
 
+## wiring
+
+ESP | Display
+--- | ---
+GND | GND
+3.3 | VCC
+D6  | CS
+D7  | DIN
+D8  | CLK
 
 ## how to install
 - flash the board
