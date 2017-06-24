@@ -1,4 +1,7 @@
+#include <ESP8266mDNS.h>
 #include <ESP8266HTTPClient.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 #include <ArduinoJson.h>
 
@@ -13,6 +16,8 @@ const String url = "http://api.coindesk.com/v1/bpi/currentprice.json";
 
 const int brightness_full = 8; // 0-15 normal brightness
 const int brightness_load = 8; // 0-15 while requesting data
+
+unsigned long next_refresh = 0;
 
 LedControl lc = LedControl(D7, D8, D6, 1);
 WiFiManager wifiManager;
@@ -43,6 +48,22 @@ void setup() {
 
   Serial.println("WIFI DONE");
 
+  // MDNS
+  if (!MDNS.begin("esp8266")) {
+    Serial.println("MDNS ERROR!");
+  }
+  MDNS.addService("http", "tcp", 80);
+  Serial.println("mDNS UP");
+
+  // Arduino OTA
+  ArduinoOTA.onStart([]() {
+    Serial.println("OTA Start");
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("OTA End");
+  });
+  ArduinoOTA.begin();
+  
   // clear display
   for (int i=0; i<8; i++) {
     lc.setChar(0,i,' ',0);
@@ -52,48 +73,53 @@ void setup() {
 }
 
 void loop() {
+  ArduinoOTA.handle();
 
-  setDashes();
-  setBrightnessLoading(true);
-
-  Serial.print("REQUEST ");
-  Serial.println(url);
+  if( (long)(millis() - next_refresh) >= 0)
+  {
+    setDashes();
+    setBrightnessLoading(true);
   
-  http.begin(url);
-  int code = http.GET();
-  Serial.println(code);
+    Serial.print("REQUEST ");
+    Serial.println(url);
+    
+    http.begin(url);
+    int code = http.GET();
+    Serial.println(code);
+    
+    if (code == 200) {
+      String payload = http.getString();
   
-  if (code == 200) {
-    String payload = http.getString();
-
-    DynamicJsonBuffer jsonBuffer(1100);
-    JsonObject& root = jsonBuffer.parseObject(payload);
-    JsonObject& bpi = root["bpi"];
-    JsonObject& bpi_USD = bpi["USD"];
-    int last = bpi_USD["rate_float"]; // last USD btc
-
-    Serial.print("last = ");
-    Serial.println(last);
-
-    lc.setChar(0, 7, 'B',false); // b
-    lc.setRow (0, 6, B00001111); // t
-    lc.setChar(0, 5, 'C',false); // c
-
-    lc.setDigit(0, 3, (last/1000), false);
-    lc.setDigit(0, 2, (last%1000)/100, false);
-    lc.setDigit(0, 1, (last%100)/10, false);
-    lc.setDigit(0, 0, (last%10), false);
-
-    setBrightnessLoading(false);
-  } else {
-    lc.setChar (0, 3, 'E', true);
-    lc.setDigit(0, 2, (code%1000)/100, false);
-    lc.setDigit(0, 1, (code%100)/10, false);
-    lc.setDigit(0, 0, (code%10), false);
+      DynamicJsonBuffer jsonBuffer(1100);
+      JsonObject& root = jsonBuffer.parseObject(payload);
+      JsonObject& bpi = root["bpi"];
+      JsonObject& bpi_USD = bpi["USD"];
+      int last = bpi_USD["rate_float"]; // last USD btc
+  
+      Serial.print("last = ");
+      Serial.println(last);
+  
+      lc.setChar(0, 7, 'B',false); // b
+      lc.setRow (0, 6, B00001111); // t
+      lc.setChar(0, 5, 'C',false); // c
+  
+      lc.setDigit(0, 3, (last/1000), false);
+      lc.setDigit(0, 2, (last%1000)/100, false);
+      lc.setDigit(0, 1, (last%100)/10, false);
+      lc.setDigit(0, 0, (last%10), false);
+  
+      setBrightnessLoading(false);
+    } else {
+      lc.setChar (0, 3, 'E', true);
+      lc.setDigit(0, 2, (code%1000)/100, false);
+      lc.setDigit(0, 1, (code%100)/10, false);
+      lc.setDigit(0, 0, (code%10), false);
+    }
+    
+    http.end();
+    next_refresh = millis() + 30000;
   }
   
-  http.end();
-  delay(30000);
 }
 
 void setDashes (void) {
