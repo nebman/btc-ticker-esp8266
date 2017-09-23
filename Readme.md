@@ -6,7 +6,9 @@
 * low power (<0.5W)
 * wifi + easy config with WifiManager captive portal
 
-## picture in action
+## pictures in action
+![animation](https://thumbs.gfycat.com/TeemingSoggyAfricanporcupine-size_restricted.gif)  
+v0.2-bitstamp-websockets in action  
 ![picture](btc-ticker-esp8266.jpg)
 displaying coindesk bpi BTCUSD
 
