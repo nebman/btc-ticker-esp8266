@@ -1,6 +1,6 @@
 # Bitcoin price ticker with ESP8266
 
-
+* **NEW:** bitstamp websocket interfacing for real time updates!
 * cheap components (total cost ~6 USD)
 * no soldering required (order display with pre-soldered pin headers)
 * low power (<0.5W)
@@ -44,11 +44,11 @@ solution: comment out or delete pgmspace.h include
 ## TODO
 
 * ! correct level-shifting to 5V (3.3V is out of spec, but works anyway)
-* add 5th digit for next ATHs ;-)
+* ~~add 5th digit for next ATHs ;-)~~
 * web portal configuration 
-* better error handling (although it seems to be pretty stable with good connection)
-* maybe use websockets for real-time ticker
+* ~~better error handling (although it seems to be pretty stable with good connection)~~
+* ~~maybe use websockets for real-time ticker~~
 * add more APIs and currencies plus option to choose
-* TLS support for HTTPS requests
+* ~~TLS support for HTTPS requests~~
 * 3D printed case
 
