@@ -7,8 +7,9 @@
 * wifi + easy config with WifiManager captive portal
 
 ## pictures in action
-![animation](https://thumbs.gfycat.com/TeemingSoggyAfricanporcupine-size_restricted.gif)  
-v0.2-bitstamp-websockets in action  
+![animation](https://thumbs.gfycat.com/VainBeautifulAcornwoodpecker-size_restricted.gif)  
+v0.2-bitstamp-websockets in action ([gfycat link](https://gfycat.com/gifs/detail/VainBeautifulAcornwoodpecker))
+
 ![picture](btc-ticker-esp8266.jpg)
 displaying coindesk bpi BTCUSD
 
