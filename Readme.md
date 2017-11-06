@@ -32,7 +32,7 @@ D8  | CLK
 ## how to install
 - flash the board
   * upload source sketch with arduino IDE
-  * or flash binary with [esptool (python)](https://github.com/espressif/esptool) or [flash download tools (WIN)](https://espressif.com/en/support/download/other-tools) @ address 0x0
+  * or flash binary [(download)](https://github.com/nebman/btc-ticker-esp8266/releases) with [esptool (python)](https://github.com/espressif/esptool) or [flash download tools (WIN)](https://espressif.com/en/support/download/other-tools) @ address 0x0
 - connect board to power 
 - connect your smartphone/computer to ESPxxxxxx wifi
 - enter your home wifi settings at the captive portal
