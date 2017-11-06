@@ -11,7 +11,7 @@
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>
-#include <WebSocketClient.h>
+#include <WebSocketClient.h>  // https://github.com/morrissinger/ESP8266-Websocket
 
 #include <LedControl.h>
 
