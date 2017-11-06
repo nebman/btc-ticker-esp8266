@@ -1,5 +1,6 @@
 # Bitcoin price ticker with ESP8266
 
+* **COMING SOON:** Working on STL file for 3D printed case, maybe switch to more compact ESP-12E/F!
 * **NEW:** bitstamp websocket interfacing for real time updates!
 * cheap components (total cost ~6 USD)
 * no soldering required (order display with pre-soldered pin headers)
