@@ -34,6 +34,8 @@ WiFiManager wifiManager;
 int last = 0;
 int err  = 0;
 
+unsigned int  timeout_swap_usdbtc = 0;
+boolean       usdbtc = false;
 
 void setup() {
   // start serial for debug output
@@ -112,6 +114,8 @@ void connect(boolean reconnect) {
   ws.path = url;
   ws.host = host;
   ws.protocol = "pusher";
+
+  Serial.println("Starting WS handshake...");
   
   if (ws.handshake(client)) {
     Serial.println("WS Handshake successful");
@@ -160,6 +164,21 @@ void loop() {
     lc.setDigit(0, 0, (last%10), false);
   }
 
+  // alternate USD and BTC in display every 10sec
+  if (((long)(millis() - timeout_swap_usdbtc) >= 0)) {
+    if (usdbtc) {
+      lc.setRow(0, 7, B00111110); // U
+      lc.setChar(0, 6, '5', false);
+      lc.setChar(0, 5, 'd', false);
+    } else {
+      lc.setChar(0, 7, 'B',false); // b
+      lc.setRow (0, 6, B00001111); // t
+      lc.setChar(0, 5, 'C',false); // c
+    }
+    usdbtc = !usdbtc;
+    timeout_swap_usdbtc = millis() + 10000;
+  }
+
   if (client.connected()) {
     String line;
     uint8_t opcode = 0;
@@ -169,7 +188,7 @@ void loop() {
     // check for PING packets, need to reply with PONG, else we get disconnected
     if (opcode == WS_OPCODE_PING) {
       Serial.println("GOT PING");
-      ws.sendData("{\"event\": \"pusher:pong\"", WS_OPCODE_PONG);
+      ws.sendData("{\"event\": \"pusher:pong\"}", WS_OPCODE_PONG);
       Serial.println("SENT PONG");
       yield();
     } else if (opcode == WS_OPCODE_PONG) {
@@ -182,7 +201,7 @@ void loop() {
     if (line.length() > 0) {
 #ifdef DEBUGGING
       Serial.print("Received data: ");
-      Serial.println(data);
+      Serial.println(line);
 #endif
 
       // parse JSON
@@ -218,11 +237,6 @@ void loop() {
         Serial.println();
       }
 
-      
-      lc.setChar(0, 7, 'B',false); // b
-      lc.setRow (0, 6, B00001111); // t
-      lc.setChar(0, 5, 'C',false); // c
-
       // this is gentlemen.
       if (last >= 10000) {
         lc.setDigit(0, 4, (last/10000), false);
@@ -242,7 +256,7 @@ void loop() {
     connect(true);
   }
 
-  delay(20);
+  delay(5);
 }
 
 void setAll(char c, boolean dot = false, int from = 0, int len = 4);
