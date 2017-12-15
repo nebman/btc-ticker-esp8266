@@ -67,7 +67,7 @@ void setup() {
   Serial.println("WIFI DONE");
 
   // MDNS
-  if (!MDNS.begin("esp8266")) {
+  if (!MDNS.begin("btc-ticker-esp8266")) {
     Serial.println("MDNS ERROR!");
   } else {
     MDNS.addService("http", "tcp", 80);
@@ -158,6 +158,7 @@ void loop() {
     Serial.println("soft timeout -> sending ping to server");
     ws.sendData("", WS_OPCODE_PING);
     timeout_soft_sent_ping = true;
+    yield();
   }
   
   if(last && ((long)(millis() - timeout_flashing_dot) >= 0)) {
@@ -208,6 +209,8 @@ void loop() {
       StaticJsonBuffer<768> jsonBuffer;
       JsonObject& root = jsonBuffer.parseObject(line);
 
+      yield();
+
       // alright, check for trade events
       if (root["event"] == "trade") {
         timeout_next = millis() + timeout_hard_threshold;
@@ -215,6 +218,7 @@ void loop() {
 
         // need to deserialize twice, data field is escaped
         JsonObject& trade = jsonBuffer.parseObject(root["data"].as<const char*>());
+        yield();
           
         if (!trade.success()) {
           Serial.println("parse json failed");
@@ -281,7 +285,18 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println("Entered wifi portal config mode");
   Serial.println(WiFi.softAPIP());
 
+  writeStringDisplay("conf");
+
   Serial.println(myWiFiManager->getConfigPortalSSID());
+}
+
+void writeStringDisplay(String s) {
+  int len = s.length();
+  if (len > 8) len = 8;
+
+  for (int i=0; i<8; i++) {
+    lc.setChar(0, 7-i, s.charAt(i), false);
+  }
 }
 
 
