@@ -1,5 +1,7 @@
 //#define DEBUGGING 1
 
+#include "exchanges.h"
+
 #include <ESP8266mDNS.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiUdp.h>
@@ -11,13 +13,13 @@
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>
-#include <WebSocketClient.h>  // https://github.com/morrissinger/ESP8266-Websocket
+#include <WebSocketClient.h>  // https://github.com/pablorodiz/Arduino-Websocket
 
 #include <LedControl.h>
 
-char  host[] = "ws.pusherapp.com";
-const int   port = 80;
-char  url[] = "/app/de504dc5763aeef9ff52";
+exchange_settings exchange = bitstampUSDBTC;
+
+
 WiFiClient client;
 WebSocketClient ws;
 
@@ -50,30 +52,32 @@ void setup() {
 
   // clear all digits
   setAll(' ', false, 0, 8);
+  writeStringDisplay("boot");
 
   // use 8 dots for startup animation
   int i=7;
 
   // set first dot... etc
-  lc.setChar(0, i--, ' ', true);
+  lc.setLed(0, i--, 0, true);
   Serial.println("WIFI AUTO-CONFIG");
+  writeStringDisplay("Auto");
  
   // autoconfiguration portal for wifi settings
   wifiManager.setAPCallback(configModeCallback);
   wifiManager.autoConnect();
 
   // wifi setup finished 
-  lc.setChar(0, i--, ' ', true);
+  lc.setLed(0, i--, 0, true);
   Serial.println("WIFI DONE");
 
   // MDNS
-  if (!MDNS.begin("btc-ticker-esp8266")) {
+  if (!MDNS.begin("esp8266")) {
     Serial.println("MDNS ERROR!");
   } else {
     MDNS.addService("http", "tcp", 80);
     Serial.println("mDNS UP");
   }
-  lc.setChar(0, i--, ' ', true);
+  lc.setLed(0, i--, 0, true);
 
   // Arduino OTA
   ArduinoOTA.onStart([]() {
@@ -83,7 +87,7 @@ void setup() {
     Serial.println("OTA End");
   });
   ArduinoOTA.begin();
-  lc.setChar(0, i--, ' ', true);
+  lc.setLed(0, i--, 0, true);
   Serial.println("OTA started");
  
   connect(false);
@@ -102,24 +106,24 @@ void connect(boolean reconnect) {
 
   // connect to the server
   Serial.println("Client connecting...");
-  if (client.connect(host, 80)) {
+  if (client.connect(exchange.host, exchange.port)) {
     Serial.println("WS Connected");
-    lc.setChar(0, i--, ' ', true);
+    lc.setLed(0, i--, 0, true);
   } else {
     Serial.println("WS Connection failed.");
     reboot();
   }
 
   // set up websocket details
-  ws.path = url;
-  ws.host = host;
-  ws.protocol = "pusher";
+  ws.setPath(exchange.url);
+  ws.setHost(exchange.host);
+  ws.setProtocol(exchange.wsproto);
 
   Serial.println("Starting WS handshake...");
   
   if (ws.handshake(client)) {
     Serial.println("WS Handshake successful");
-    lc.setChar(0, i--, ' ', true);
+    lc.setLed(0, i--, 0, true);
   } else {
     Serial.println("WS Handshake failed.");
     reboot();
@@ -127,8 +131,8 @@ void connect(boolean reconnect) {
 
   // subscribe to event channel "live_trades"
   Serial.println("WS Subscribe");
-  ws.sendData("{\"event\": \"pusher:subscribe\", \"data\": {\"channel\": \"live_trades\"}}");
-  lc.setChar(0, i--, ' ', true);
+  ws.sendData(exchange.subscribe);
+  lc.setLed(0, i--, 0, true);
 
   
 
@@ -142,6 +146,7 @@ void connect(boolean reconnect) {
 
 void loop() {
   ArduinoOTA.handle();
+  ws.process();
 
   // check for hard timeout
   if( (long)(millis() - timeout_next) >= 0) {
@@ -168,13 +173,9 @@ void loop() {
   // alternate USD and BTC in display every 10sec
   if (((long)(millis() - timeout_swap_usdbtc) >= 0)) {
     if (usdbtc) {
-      lc.setRow(0, 7, B00111110); // U
-      lc.setChar(0, 6, '5', false);
-      lc.setChar(0, 5, 'd', false);
+      writeStringDisplay("USD");
     } else {
-      lc.setChar(0, 7, 'B',false); // b
-      lc.setRow (0, 6, B00001111); // t
-      lc.setChar(0, 5, 'C',false); // c
+      writeStringDisplay("BTC");
     }
     usdbtc = !usdbtc;
     timeout_swap_usdbtc = millis() + 10000;
@@ -184,83 +185,88 @@ void loop() {
     String line;
     uint8_t opcode = 0;
     
-    ws.getData(line, &opcode);
-
-    // check for PING packets, need to reply with PONG, else we get disconnected
-    if (opcode == WS_OPCODE_PING) {
-      Serial.println("GOT PING");
-      ws.sendData("{\"event\": \"pusher:pong\"}", WS_OPCODE_PONG);
-      Serial.println("SENT PONG");
-      yield();
-    } else if (opcode == WS_OPCODE_PONG) {
-      Serial.println("GOT PONG, connection still active");
-      timeout_soft_sent_ping = false;
-      timeout_next = millis() + timeout_hard_threshold;
-    }
-
-    // check for data in received packet
-    if (line.length() > 0) {
-#ifdef DEBUGGING
-      Serial.print("Received data: ");
-      Serial.println(line);
-#endif
-
-      // parse JSON
-      StaticJsonBuffer<768> jsonBuffer;
-      JsonObject& root = jsonBuffer.parseObject(line);
-
-      yield();
-
-      // alright, check for trade events
-      if (root["event"] == "trade") {
-        timeout_next = millis() + timeout_hard_threshold;
-        Serial.print("GOT TRADE ");
-
-        // need to deserialize twice, data field is escaped
-        JsonObject& trade = jsonBuffer.parseObject(root["data"].as<const char*>());
+    if (ws.getData(line, &opcode)) {
+  
+      // check for PING packets, need to reply with PONG, else we get disconnected
+      if (opcode == WS_OPCODE_PING) {
+        Serial.println("GOT PING");
+        ws.sendData("{\"event\": \"pusher:pong\"}", WS_OPCODE_PONG);
+        Serial.println("SENT PONG");
         yield();
-          
-        if (!trade.success()) {
-          Serial.println("parse json failed");
-          return;
-        }
-#ifdef DEBUGGING 
-        trade.printTo(Serial);
+      } else if (opcode == WS_OPCODE_PONG) {
+        Serial.println("GOT PONG, connection still active");
+        timeout_soft_sent_ping = false;
+        timeout_next = millis() + timeout_hard_threshold;
+      }
+  
+      // check for data in received packet
+      if (line.length() > 0) {
+#ifdef DEBUGGING
+        Serial.print("Received data: ");
+        Serial.println(line);
 #endif
 
-        // extract price
-        last = trade["price_str"]; // last USD btc
-    
-        Serial.print("price = ");
-        Serial.println(last);
-        
-      } else {
-        Serial.println("Unknown Event occured");
-        Serial.println(root["event"].as<const char*>());
-        root.printTo(Serial);
-        Serial.println();
-      }
-
-      // this is gentlemen.
-      if (last >= 10000) {
-        lc.setDigit(0, 4, (last/10000), false);
-      } else {
-        lc.setChar(0, 4, ' ',false); //  
-      }
+        // parse JSON
+        StaticJsonBuffer<768> jsonBuffer;
+        JsonObject& root = jsonBuffer.parseObject(line);
+  
+        yield();
+  
+        // alright, check for trade events
+        if (root["event"] == "trade") {
+          timeout_next = millis() + timeout_hard_threshold;
+          Serial.print("GOT TRADE ");
+  
+          // need to deserialize twice, data field is escaped
+          JsonObject& trade = jsonBuffer.parseObject(root["data"].as<const char*>());
+          yield();
+            
+          if (!trade.success()) {
+            Serial.println("parse json failed");
+            return;
+          }
+#ifdef DEBUGGING 
+          trade.printTo(Serial);
+#endif
+  
+          // extract price
+          last = trade["price_str"]; // last USD btc
       
-      lc.setDigit(0, 3, (last%10000)/1000, false);
-      lc.setDigit(0, 2, (last%1000)/100, false);
-      lc.setDigit(0, 1, (last%100)/10, false);
-      lc.setDigit(0, 0, (last%10), true);
-
-      timeout_flashing_dot = millis() + 100;
-    } 
+          Serial.print("price = ");
+          Serial.println(last);
+          
+        } else {
+          Serial.println("Unknown Event occured");
+          Serial.println(root["event"].as<const char*>());
+          root.printTo(Serial);
+          Serial.println();
+        }
+  
+        writePriceDisplay(true);
+      } 
+    }
   } else {
     Serial.println("Client disconnected.");
     connect(true);
   }
 
   delay(5);
+}
+
+void writePriceDisplay(boolean flashDot) {
+  // this is gentlemen.
+  if (last >= 10000) {
+    lc.setDigit(0, 4, (last/10000), false);
+  } else {
+    lc.setChar(0, 4, ' ',false); //  
+  }
+  
+  lc.setDigit(0, 3, (last%10000)/1000, false);
+  lc.setDigit(0, 2, (last%1000)/100, false);
+  lc.setDigit(0, 1, (last%100)/10, false);
+  lc.setDigit(0, 0, (last%10), flashDot);
+
+  if (flashDot) timeout_flashing_dot = millis() + 100;
 }
 
 void setAll(char c, boolean dot = false, int from = 0, int len = 4);
@@ -285,7 +291,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println("Entered wifi portal config mode");
   Serial.println(WiFi.softAPIP());
 
-  writeStringDisplay("conf");
+  writeStringDisplay(myWiFiManager->getConfigPortalSSID());
 
   Serial.println(myWiFiManager->getConfigPortalSSID());
 }
@@ -293,9 +299,27 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 void writeStringDisplay(String s) {
   int len = s.length();
   if (len > 8) len = 8;
+  char c;
 
-  for (int i=0; i<8; i++) {
-    lc.setChar(0, 7-i, s.charAt(i), false);
+  for (int i=0; i<len; i++) {
+    c = s.charAt(i);
+    switch (c) {
+      case 'S':
+      case 's':
+        lc.setChar(0, 7-i, '5', false);
+        break;
+      case 'T':
+      case 't':
+        lc.setRow (0, 7-i, B00001111); // t
+        break;
+      case 'U':
+      case 'u':
+        lc.setRow (0, 7-i, B00111110); // U
+        break;
+      default:
+        lc.setChar(0, 7-i, c, false);
+    }
+    
   }
 }
 
