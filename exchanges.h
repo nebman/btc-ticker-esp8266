@@ -11,7 +11,7 @@ struct exchange_settings {
 const exchange_settings bitstampUSDBTC = {
   "ws.pusherapp.com",
   80,
-  "/app/de504dc5763aeef9ff52",
+  "/app/de504dc5763aeef9ff52?protocol=7",
   "pusher",
   "{\"event\": \"pusher:subscribe\", \"data\": {\"channel\": \"live_trades\"}}"
 };
