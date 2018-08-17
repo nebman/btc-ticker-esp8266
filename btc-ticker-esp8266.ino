@@ -28,10 +28,6 @@
   #include <ArduinoOTA.h>
 #endif
 
-#include <ESP8266HTTPClient.h>
-#include <WiFiUdp.h>
-
-
 #include <ArduinoJson.h>
 
 #include <ESP8266WiFi.h>
@@ -77,12 +73,12 @@ void setup() {
 
   initDisplay();
   clearDisplay();
-  writeStringDisplay("boot");
+  writeStringDisplay("boot", true);
 
   // use 8 dots for startup animation
   setProgress(1);
   Serial.println("WIFI AUTO-CONFIG");
-  writeStringDisplay("Auto");
+  writeStringDisplay("Auto", true);
  
   // autoconfiguration portal for wifi settings
 #ifdef HOSTNAME
@@ -110,11 +106,11 @@ void setup() {
   // Arduino OTA
   ArduinoOTA.onStart([]() {
     Serial.println("OTA Start");
-    writeStringDisplay("OTASTART");
+    writeStringDisplay("OTASTART", true);
   });
   ArduinoOTA.onEnd([]() {
     Serial.println("OTA End");
-    writeStringDisplay("OTAEND");
+    writeStringDisplay("OTAEND", true);
   });
   ArduinoOTA.begin();
   setProgress(4);
@@ -318,18 +314,60 @@ void reboot (void) {
 void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println("Entered wifi portal config mode");
   Serial.println(WiFi.softAPIP());
-  writeStringDisplay(myWiFiManager->getConfigPortalSSID());
+  writeStringDisplay(myWiFiManager->getConfigPortalSSID(), true);
   Serial.println(myWiFiManager->getConfigPortalSSID());
 }
- 
-void writeStringDisplay(String s) {
+
+/*     
+ *  display segment bits
+ *  
+ *      1
+ *    -----
+ *   |     |
+ * 6 |     | 2
+ *   |     |
+ *    -----
+ *   |  7  |
+ * 5 |     | 3
+ *   |     |
+ *    ----- . 0
+ *      4
+ * 
+ */
+
+void writeStringDisplay(String s, boolean fillEmpty = false);
+void writeStringDisplay(String s, boolean fillEmpty) {
   int len = s.length();
   if (len > 8) len = 8;
   char c;
 
-  for (int i=0; i<len; i++) {
+  for (byte i=0; i<len; i++) {
     c = s.charAt(i);
     switch (c) {
+      case 'A':
+      case 'a':
+        lc.setRow (0, 7-i, B01110111);
+        break;
+      case 'L':
+      case 'l':
+        lc.setRow (0, 7-i, B00001110);
+        break;
+      case 'N':
+      case 'n':
+        lc.setRow (0, 7-i, B00010101);
+        break;
+      case 'O':
+      case 'o':
+        lc.setRow (0, 7-i, B01111110);
+        break;
+      case 'P':
+      case 'p':
+        lc.setRow (0, 7-i, B01100111);
+        break;
+      case 'R':
+      case 'r':
+        lc.setRow (0, 7-i, B00000101);
+        break;
       case 'S':
       case 's':
         lc.setChar(0, 7-i, '5', false);
@@ -346,6 +384,13 @@ void writeStringDisplay(String s) {
         lc.setChar(0, 7-i, c, false);
     }
     
+  }
+
+  if (fillEmpty) {
+    // fill rest with empty space
+    for (byte i=len; i<8; i++) {
+      lc.setRow(0, 7-i, 0);
+    }
   }
 }
 
