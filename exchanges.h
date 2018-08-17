@@ -7,6 +7,7 @@ struct exchange_settings {
   char* subscribe;
 };
 
+// bitstamp USD BTC tested & working
 
 const exchange_settings bitstampUSDBTC = {
   "ws.pusherapp.com",
@@ -16,6 +17,8 @@ const exchange_settings bitstampUSDBTC = {
   "{\"event\": \"pusher:subscribe\", \"data\": {\"channel\": \"live_trades\"}}"
 };
 
+// UNTESTED
+
 const exchange_settings bitstampEURBTC = {
   "ws.pusherapp.com",
   80,
@@ -23,6 +26,8 @@ const exchange_settings bitstampEURBTC = {
   "pusher",
   "{\"event\": \"pusher:subscribe\", \"data\": {\"channel\": \"live_trades_btceur\"}}"
 };
+
+// UNTESTED
 
 const exchange_settings gdaxUSDBTC = {
   "ws-feed-public.sandbox.gdax.com",

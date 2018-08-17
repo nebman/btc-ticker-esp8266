@@ -24,7 +24,7 @@ displaying coindesk bpi BTCUSD
 ESP | Display
 --- | ---
 GND | GND
-3.3 | VCC
+5V/VIN | VCC
 D6  | CS
 D7  | DIN
 D8  | CLK

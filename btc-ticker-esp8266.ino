@@ -1,11 +1,36 @@
-//#define DEBUGGING 1
+// CONFIGURATION PART *************************************************************************
+
+// Set DEBUGGING for addiditonal debugging output over serial
+//#define DEBUGGING
+
+// Set Display type, either SEGMENT7 or MATRIX32
+#define SEGMENT7
+//#define MATRIX32
+
+// Features MDNS, OTA
+#define FEATURE_OTA
+#define FEATURE_MDNS
+
+// set Hostname
+#define HOSTNAME "ESP-BTC-TICKER"
+
+// END CONFIG *********************************************************************************
+
+
 
 #include "exchanges.h"
 
-#include <ESP8266mDNS.h>
+#ifdef FEATURE_MDNS
+  #include <ESP8266mDNS.h>
+#endif
+
+#ifdef FEATURE_OTA
+  #include <ArduinoOTA.h>
+#endif
+
 #include <ESP8266HTTPClient.h>
 #include <WiFiUdp.h>
-#include <ArduinoOTA.h>
+
 
 #include <ArduinoJson.h>
 
@@ -15,13 +40,17 @@
 #include <WiFiManager.h>
 #include <WebSocketClient.h>  // https://github.com/pablorodiz/Arduino-Websocket
 
-#include <LedControl.h>
+#ifdef SEGMENT7
+  #include <LedControl.h>
+#endif
 
 exchange_settings exchange = bitstampUSDBTC;
 
-
+WiFiManager wifiManager;
 WiFiClient client;
 WebSocketClient ws;
+
+// Variables and constants for timeouts 
 
 const int     timeout_hard_threshold = 120000; // reconnect after 120sec
 const int     timeout_soft_threshold = 60000; // timeout default 60sec, send ping to check connection
@@ -30,85 +59,86 @@ unsigned long timeout_next = 0;
 unsigned long timeout_flashing_dot = 0;
 unsigned int  timeout_reconnect_count = 0;
 
-LedControl lc = LedControl(D7, D8, D6, 1);
-WiFiManager wifiManager;
+#ifdef SEGMENT7
+  LedControl lc = LedControl(D7, D8, D6, 4);
+  unsigned int  timeout_swap_usdbtc = 0;
+  boolean       usdbtc = false;
+#endif
 
+// current values
 int last = 0;
 int err  = 0;
-
-unsigned int  timeout_swap_usdbtc = 0;
-boolean       usdbtc = false;
 
 void setup() {
   // start serial for debug output
   Serial.begin(115200);
   Serial.println();
   Serial.println("INIT");
-  
-  // wakeup 7 segment display
-  lc.shutdown(0, false);
-  // set brightness
-  lc.setIntensity(0, 8);
 
-  // clear all digits
-  setAll(' ', false, 0, 8);
+  initDisplay();
+  clearDisplay();
   writeStringDisplay("boot");
 
   // use 8 dots for startup animation
-  int i=7;
-
-  // set first dot... etc
-  lc.setLed(0, i--, 0, true);
+  setProgress(1);
   Serial.println("WIFI AUTO-CONFIG");
   writeStringDisplay("Auto");
  
   // autoconfiguration portal for wifi settings
+#ifdef HOSTNAME
+  WiFi.hostname(HOSTNAME);
+#endif
   wifiManager.setAPCallback(configModeCallback);
   wifiManager.autoConnect();
 
   // wifi setup finished 
-  lc.setLed(0, i--, 0, true);
+  setProgress(2);
   Serial.println("WIFI DONE");
 
+#ifdef FEATURE_MDNS
   // MDNS
-  if (!MDNS.begin("esp8266")) {
+  if (!MDNS.begin(HOSTNAME)) {
     Serial.println("MDNS ERROR!");
   } else {
     MDNS.addService("http", "tcp", 80);
     Serial.println("mDNS UP");
   }
-  lc.setLed(0, i--, 0, true);
+  setProgress(3);
+#endif
 
+#ifdef FEATURE_OTA
   // Arduino OTA
   ArduinoOTA.onStart([]() {
     Serial.println("OTA Start");
+    writeStringDisplay("OTASTART");
   });
   ArduinoOTA.onEnd([]() {
     Serial.println("OTA End");
+    writeStringDisplay("OTAEND");
   });
   ArduinoOTA.begin();
-  lc.setLed(0, i--, 0, true);
+  setProgress(4);
   Serial.println("OTA started");
- 
+#endif
+
+  setProgress(5);
   connect(false);
 }
 
 void connect(boolean reconnect) {
-  int i=3;
   timeout_soft_sent_ping = false;
 
   if (reconnect) {
     timeout_reconnect_count++;
     if (timeout_reconnect_count > 2) reboot();
-    setAll(' ', true, 0, 8);
-    setAll(' ', false, 0, i);
+    clearDisplay();
   }
 
   // connect to the server
   Serial.println("Client connecting...");
   if (client.connect(exchange.host, exchange.port)) {
     Serial.println("WS Connected");
-    lc.setLed(0, i--, 0, true);
+    setProgress(6);
   } else {
     Serial.println("WS Connection failed.");
     reboot();
@@ -123,7 +153,7 @@ void connect(boolean reconnect) {
   
   if (ws.handshake(client)) {
     Serial.println("WS Handshake successful");
-    lc.setLed(0, i--, 0, true);
+    setProgress(7);
   } else {
     Serial.println("WS Handshake failed.");
     reboot();
@@ -132,32 +162,34 @@ void connect(boolean reconnect) {
   // subscribe to event channel "live_trades"
   Serial.println("WS Subscribe");
   ws.sendData(exchange.subscribe);
-  lc.setLed(0, i--, 0, true);
+  setProgress(8);
 
   
 
   // Finish setup, complete animation, set first timeout
-  setAll(' ', true, 0, 8);
+  clearDisplay();
+  setProgress(0);
   timeout_next = millis() + timeout_hard_threshold;
+  
   Serial.println("All set up, waiting for first trade...");
-
   Serial.println();
 }
 
 void loop() {
+#ifdef FEATURE_OTA
   ArduinoOTA.handle();
-  ws.process();
+#endif
+  ws.process(); // process websocket 
 
   // check for hard timeout
   if( (long)(millis() - timeout_next) >= 0) {
     Serial.println();
     Serial.println("TIMEOUT -> RECONNECT");
     Serial.println();
-
     connect(true);
   }
 
-  // check for soft timeout (slow day?)
+  // check for soft timeout (slow day?) send websocket ping
   if(!timeout_soft_sent_ping && client.connected() && (long)(millis() - timeout_next + timeout_soft_threshold) >= 0) {
     // ok, lets send a PING to check connection
     Serial.println("soft timeout -> sending ping to server");
@@ -165,22 +197,14 @@ void loop() {
     timeout_soft_sent_ping = true;
     yield();
   }
-  
-  if(last && ((long)(millis() - timeout_flashing_dot) >= 0)) {
-    lc.setDigit(0, 0, (last%10), false);
-  }
 
-  // alternate USD and BTC in display every 10sec
-  if (((long)(millis() - timeout_swap_usdbtc) >= 0)) {
-    if (usdbtc) {
-      writeStringDisplay("USD");
-    } else {
-      writeStringDisplay("BTC");
-    }
-    usdbtc = !usdbtc;
-    timeout_swap_usdbtc = millis() + 10000;
-  }
+  // flash the dot when a trade occurs
+  flashDotTrade();
 
+  // alternate currency display
+  alternateCurrency();
+
+  // check if socket still connected
   if (client.connected()) {
     String line;
     uint8_t opcode = 0;
@@ -254,6 +278,7 @@ void loop() {
 }
 
 void writePriceDisplay(boolean flashDot) {
+#ifdef SEGMENT7
   // this is gentlemen.
   if (last >= 10000) {
     lc.setDigit(0, 4, (last/10000), false);
@@ -266,7 +291,10 @@ void writePriceDisplay(boolean flashDot) {
   lc.setDigit(0, 1, (last%100)/10, false);
   lc.setDigit(0, 0, (last%10), flashDot);
 
-  if (flashDot) timeout_flashing_dot = millis() + 100;
+  if (flashDot) {
+    timeout_flashing_dot = millis() + 100;
+  }
+#endif
 }
 
 void setAll(char c, boolean dot = false, int from = 0, int len = 4);
@@ -290,12 +318,10 @@ void reboot (void) {
 void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println("Entered wifi portal config mode");
   Serial.println(WiFi.softAPIP());
-
   writeStringDisplay(myWiFiManager->getConfigPortalSSID());
-
   Serial.println(myWiFiManager->getConfigPortalSSID());
 }
-
+ 
 void writeStringDisplay(String s) {
   int len = s.length();
   if (len > 8) len = 8;
@@ -323,4 +349,53 @@ void writeStringDisplay(String s) {
   }
 }
 
+void clearDisplay() {
+#ifdef SEGMENT7
+  // clear all digits
+  setAll(' ', false, 0, 8);
+#endif
+}
+
+void initDisplay() {
+#ifdef SEGMENT7
+  // wakeup 7 segment display
+  lc.shutdown(0, false);
+  // set brightness
+  lc.setIntensity(0, 6);
+#endif
+}
+
+void setProgress(byte progress) {
+#ifdef SEGMENT7
+  // set first dot... etc
+  for (byte i=0; i<8; i++) {
+    lc.setLed(0, 7-i, 0, i<progress);
+  }
+#endif
+}
+
+void flashDotTrade() {
+#ifdef SEGMENT7
+  if(last && ((long)(millis() - timeout_flashing_dot) >= 0)) {
+    lc.setLed(0, 0, 0, false);
+  } else {
+    lc.setLed(0, 0, 0, true);
+  }
+#endif
+}
+
+void alternateCurrency() {
+#ifdef SEGMENT7  
+  // alternate USD and BTC in display every 10sec
+  if (((long)(millis() - timeout_swap_usdbtc) >= 0)) {
+    if (usdbtc) {
+      writeStringDisplay("USD");
+    } else {
+      writeStringDisplay("BTC");
+    }
+    usdbtc = !usdbtc;
+    timeout_swap_usdbtc = millis() + 10000;
+  }
+#endif
+}
 
