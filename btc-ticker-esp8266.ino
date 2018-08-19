@@ -1,7 +1,9 @@
+#include "exchanges.h"
+
 // CONFIGURATION PART *************************************************************************
 
 // Set DEBUGGING for addiditonal debugging output over serial
-//#define DEBUGGING
+// #define DEBUGGING
 
 // Set Display type, either SEGMENT7 or MATRIX32
 #define SEGMENT7
@@ -14,11 +16,11 @@
 // set Hostname
 #define HOSTNAME "ESP-BTC-TICKER"
 
+#define ENABLE_BITFINEX  // enable WSS support and array handling
+exchange_settings exchange = bitfinexUSDBTC;
+
 // END CONFIG *********************************************************************************
 
-
-
-#include "exchanges.h"
 
 #ifdef FEATURE_MDNS
   #include <ESP8266mDNS.h>
@@ -39,11 +41,13 @@
 #ifdef SEGMENT7
   #include <LedControl.h>
 #endif
-
-exchange_settings exchange = bitstampUSDBTC;
+#ifdef MATRIX32
+  #include <U8g2lib.h>
+  #include <U8x8lib.h>
+#endif
 
 WiFiManager wifiManager;
-WiFiClient client;
+WiFiClientSecure  client;
 WebSocketClient ws;
 
 // Variables and constants for timeouts 
@@ -59,6 +63,12 @@ unsigned int  timeout_reconnect_count = 0;
   LedControl lc = LedControl(D7, D8, D6, 4);
   unsigned int  timeout_swap_usdbtc = 0;
   boolean       usdbtc = false;
+#endif
+#ifdef MATRIX32
+  U8G2_MAX7219_32X8_F_4W_HW_SPI matrix(U8G2_R0, D2, U8X8_PIN_NONE);
+  byte _progress = 0;
+  String _text = "";
+  boolean _dot = false;
 #endif
 
 // current values
@@ -229,7 +239,8 @@ void loop() {
         // parse JSON
         StaticJsonBuffer<768> jsonBuffer;
         JsonObject& root = jsonBuffer.parseObject(line);
-  
+        JsonArray& rootarray = jsonBuffer.parseArray(line);
+
         yield();
   
         // alright, check for trade events
@@ -255,10 +266,22 @@ void loop() {
           Serial.print("price = ");
           Serial.println(last);
           
-        } else {
-          Serial.println("Unknown Event occured");
-          Serial.println(root["event"].as<const char*>());
+        } 
+        
+#ifdef ENABLE_BITFINEX        
+        else if (rootarray[1] == "tu") {  // Bitfinex Tradeupdate
+          last = rootarray[2][3];
+          Serial.print("price = ");
+          Serial.println(last);
+          timeout_next = millis() + timeout_hard_threshold;
+        } else if (rootarray[1] == "hb") {  // Bitfinex Heartbeat
+          timeout_next = millis() + timeout_hard_threshold;
+        }
+#endif
+        
+        else { // print unknown events and arrays
           root.printTo(Serial);
+          rootarray.printTo(Serial);
           Serial.println();
         }
   
@@ -286,23 +309,38 @@ void writePriceDisplay(boolean flashDot) {
   lc.setDigit(0, 2, (last%1000)/100, false);
   lc.setDigit(0, 1, (last%100)/10, false);
   lc.setDigit(0, 0, (last%10), flashDot);
-
+#endif
+  
   if (flashDot) {
     timeout_flashing_dot = millis() + 100;
   }
+  
+#ifdef MATRIX32
+  char val[8] = "$";
+  itoa(last, val+1, 10);
+  flashDotTrade();
+  writeStringDisplay(val, true);
 #endif
 }
 
+#ifdef SEGMENT7
 void setAll(char c, boolean dot = false, int from = 0, int len = 4);
 void setAll(char c, boolean dot, int from, int len) {
   for (int i=from; i<len; i++) {
     lc.setChar(0, i, c, dot);
   }
 }
+#endif SEGMENT7
+
 
 void setDashes (int len = 4);
 void setDashes (int len) {
+#ifdef SEGMENT7
   setAll('-', false, 0, len);
+#endif
+#ifdef MATRIX32
+  writeStringDisplay("--------", true);
+#endif
 }
 
 void reboot (void) {
@@ -337,6 +375,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 
 void writeStringDisplay(String s, boolean fillEmpty = false);
 void writeStringDisplay(String s, boolean fillEmpty) {
+#ifdef SEGMENT7
   int len = s.length();
   if (len > 8) len = 8;
   char c;
@@ -358,7 +397,7 @@ void writeStringDisplay(String s, boolean fillEmpty) {
         break;
       case 'O':
       case 'o':
-        lc.setRow (0, 7-i, B01111110);
+        lc.setRow (0, 7-i, B00011101);
         break;
       case 'P':
       case 'p':
@@ -392,14 +431,25 @@ void writeStringDisplay(String s, boolean fillEmpty) {
       lc.setRow(0, 7-i, 0);
     }
   }
-}
-
-void clearDisplay() {
-#ifdef SEGMENT7
-  // clear all digits
-  setAll(' ', false, 0, 8);
+#endif
+#ifdef MATRIX32
+  _text = s;
+  redrawDisplay();
 #endif
 }
+
+#ifdef MATRIX32
+void redrawDisplay() {
+  //matrix.clear();
+  matrix.firstPage();
+  do {
+    matrix.setFont(u8g2_font_5x8_tr);
+    matrix.drawStr(0, 7, _text.c_str());
+    if (_progress > 0)   matrix.drawLine(0, 7, (_progress*4)-1, 7);
+    if (_dot)            matrix.drawPixel(31,7);
+  } while ( matrix.nextPage() );
+}
+#endif 
 
 void initDisplay() {
 #ifdef SEGMENT7
@@ -407,6 +457,20 @@ void initDisplay() {
   lc.shutdown(0, false);
   // set brightness
   lc.setIntensity(0, 6);
+#endif
+#ifdef MATRIX32
+  matrix.begin();
+  matrix.setContrast(70);
+#endif
+}
+
+void clearDisplay() {
+#ifdef SEGMENT7
+  // clear all digits
+  setAll(' ', false, 0, 8);
+#endif
+#ifdef MATRIX32
+  matrix.clear();
 #endif
 }
 
@@ -417,14 +481,28 @@ void setProgress(byte progress) {
     lc.setLed(0, 7-i, 0, i<progress);
   }
 #endif
+#ifdef MATRIX32
+  _progress = progress;
+  redrawDisplay();
+#endif
 }
 
 void flashDotTrade() {
-#ifdef SEGMENT7
+  bool flashdot;
+  
   if(last && ((long)(millis() - timeout_flashing_dot) >= 0)) {
-    lc.setLed(0, 0, 0, false);
+    flashdot = false;
   } else {
-    lc.setLed(0, 0, 0, true);
+    flashdot = true;
+  }
+  
+#ifdef SEGMENT7
+  lc.setLed(0, 0, 0, flashdot);
+#endif
+#ifdef MATRIX32
+  if (_dot != flashdot) {
+    _dot = flashdot;
+    redrawDisplay();
   }
 #endif
 }

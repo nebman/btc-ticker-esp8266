@@ -37,4 +37,13 @@ const exchange_settings gdaxUSDBTC = {
   "{\"type\": \"subscribe\", \"channels\": [{\"name\": \"ticker\",\"product_ids\": [\"BTC-USD\"]}]}"
 };
 
+// new UNTESTED
+
+const exchange_settings bitfinexUSDBTC = {
+  "api.bitfinex.com",
+  443,
+  "/ws/2",
+  "websocket",
+  "{\"event\":\"subscribe\",\"channel\":\"trades\",\"symbol\":\"tBTCUSD\" }"
+};
 

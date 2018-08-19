@@ -1,7 +1,8 @@
 # Bitcoin price ticker with ESP8266
 
 * **COMING SOON:** Working on STL file for 3D printed case, maybe switch to more compact ESP-12E/F!
-* **NEW:** bitstamp websocket interfacing for real time updates!
+* **NEW:** Dot Matrix LED Display support with 32x8px
+* **NEW:** bitstamp & bitfinex websocket interfacing for real time updates!
 * cheap components (total cost ~6 USD)
 * no soldering required (order display with pre-soldered pin headers)
 * low power (<0.5W)
@@ -11,15 +12,20 @@
 ![animation](https://thumbs.gfycat.com/VainBeautifulAcornwoodpecker-size_restricted.gif)  
 v0.2-bitstamp-websockets in action ([gfycat link](https://gfycat.com/gifs/detail/VainBeautifulAcornwoodpecker))
 
-![picture](btc-ticker-esp8266.jpg)
-displaying coindesk bpi BTCUSD
+
+![picture](btc-ticker-esp8266-matrix32.jpg)  
+v0.3 with dot matrix display
+
+
+![picture](btc-ticker-esp8266.jpg)  
+original prototype
 
 ## components
-* ESP8266 Wemos D1 R2 Uno ([link](https://www.aliexpress.com/item/WeMos-D1R2-analog-WiFi-D1-R2-integration-of-ESP8266-32Mb-flash-form-factor-for-Ard-Uno/32739176923.html)), other ESP8266s/NodeMCUs might work too
-* 7 segment display with MAX7219 ([link](https://www.aliexpress.com/wholesale?catId=0&initiative_id=SB_20170409112750&SearchText=max7219+display))
-* dupont cables (female-to-male) and a cheap antenna ;)
+* ESP8266 Wemos D1 R2 Uno ([link](http://s.click.aliexpress.com/e/cN7TWnfi)) or ESP8266s/NodeMCUs ([link](http://s.click.aliexpress.com/e/bqhV6bqg))
+* 7 segment display with MAX7219 ([link](http://s.click.aliexpress.com/e/7uottDW)) or Dot Matrix display ([link](http://s.click.aliexpress.com/e/Jckdk7Q))
+* dupont cables (female-to-male) and maybe a cheap antenna ;)
 
-## wiring
+## wiring 7-segment
 
 ESP | Display
 --- | ---
@@ -28,6 +34,16 @@ GND | GND
 D6  | CS
 D7  | DIN
 D8  | CLK
+
+## wiring dot-matrix-display using hardware SPI
+
+NodeMCU | Display
+---     | ---
+GND     | GND
+5V/VIN  | VCC
+D2      | CS
+D5      | CLK
+D7      | DIN
 
 ## how to install
 - flash the board
