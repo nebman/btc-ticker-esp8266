@@ -60,7 +60,7 @@ unsigned long timeout_flashing_dot = 0;
 unsigned int  timeout_reconnect_count = 0;
 
 #ifdef SEGMENT7
-  LedControl lc = LedControl(D7, D8, D6, 4);
+  LedControl lc = LedControl(D7, D5, D8, 1);
   unsigned int  timeout_swap_usdbtc = 0;
   boolean       usdbtc = false;
 #endif
@@ -521,4 +521,3 @@ void alternateCurrency() {
   }
 #endif
 }
-

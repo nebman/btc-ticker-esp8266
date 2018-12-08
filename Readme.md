@@ -1,12 +1,9 @@
-# Bitcoin price ticker with ESP8266
+# Bitcoin price ticker with ESP8266 (realtime websockets)
 
-* **COMING SOON:** Working on STL file for 3D printed case, maybe switch to more compact ESP-12E/F!
-* **NEW:** Dot Matrix LED Display support with 32x8px
-* **NEW:** bitstamp & bitfinex websocket interfacing for real time updates!
-* cheap components (total cost ~6 USD)
-* no soldering required (order display with pre-soldered pin headers)
-* low power (<0.5W)
-* wifi + easy config with WifiManager captive portal
+* 7-segment 8-bit - or - Dot Matrix LED Display support with 32x8px
+* bitstamp & bitfinex websocket interfacing for lightning fast, real time updates!
+* solderless build possible (if you order the display with pre-soldered pin headers)
+* low power (<0.5W), cheap to build (around 5 EUR)
 
 ## pictures in action
 ![animation](https://thumbs.gfycat.com/VainBeautifulAcornwoodpecker-size_restricted.gif)  
@@ -21,19 +18,19 @@ v0.3 with dot matrix display
 original prototype
 
 ## components
-* ESP8266 Wemos D1 R2 Uno ([link](http://s.click.aliexpress.com/e/cN7TWnfi)) or ESP8266s/NodeMCUs ([link](http://s.click.aliexpress.com/e/bqhV6bqg))
+* ESP8266 Wemos D1 R2 Uno ([link](http://s.click.aliexpress.com/e/cN7TWnfi)) or ESP8266s/NodeMCUs ([link](http://s.click.aliexpress.com/e/bqhV6bqg)) or Wemos D1 Mini
 * 7 segment display with MAX7219 ([link](http://s.click.aliexpress.com/e/7uottDW)) or Dot Matrix display ([link](http://s.click.aliexpress.com/e/Jckdk7Q))
 * dupont cables (female-to-male) and maybe a cheap antenna ;)
 
-## wiring 7-segment
+## wiring 7-segment (software SPI, Wemos D1 Mini)
 
-ESP | Display
+D1 Mini | Display
 --- | ---
 GND | GND
 5V/VIN | VCC
-D6  | CS
+D8  | CS
 D7  | DIN
-D8  | CLK
+D5  | CLK
 
 ## wiring dot-matrix-display using hardware SPI
 
@@ -53,6 +50,16 @@ D7      | DIN
 - connect your smartphone/computer to ESPxxxxxx wifi
 - enter your home wifi settings at the captive portal
 
+## 3D printed case options
+
+these are the 3rd party designs I have tested for this project
+
+Case | Link | Remarks
+-----|-----|-----
+coinboard|https://www.thingiverse.com/thing:2785082 |Wemos D1 only, works okish with some hotglue
+ESP8266 Matrix Display Case|https://www.thingiverse.com/thing:2885225| printed too small, pay attention to your matrix module size! mine was a little larger
+IR Remote Tester|https://www.thingiverse.com/thing:1413083|works good (I closed the sensor hole above the display) but screw mechanism needs rework or maybe screw inserts
+
 ## known issues
 
 - compilation error in LedControl.h:  
@@ -66,7 +73,7 @@ solution: comment out or delete pgmspace.h include
 * web portal configuration 
 * ~~better error handling (although it seems to be pretty stable with good connection)~~
 * ~~maybe use websockets for real-time ticker~~
-* add more APIs and currencies plus option to choose
+* ~~add more APIs and currencies~~ plus option to choose
 * ~~TLS support for HTTPS requests~~
-* 3D printed case
+* ~~options for 3D printed case~~
 
