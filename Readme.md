@@ -9,12 +9,14 @@
 ![animation](https://thumbs.gfycat.com/VainBeautifulAcornwoodpecker-size_restricted.gif)  
 v0.2-bitstamp-websockets in action ([gfycat link](https://gfycat.com/gifs/detail/VainBeautifulAcornwoodpecker))
 
+![coinboard case](docs/images/photo_coinboard_case.jpg)
+3D printed coinboard case
 
-![picture](btc-ticker-esp8266-matrix32.jpg)  
+![picture](docs/images/btc-ticker-esp8266-matrix32.jpg)  
 v0.3 with dot matrix display
 
 
-![picture](btc-ticker-esp8266.jpg)  
+![picture](docs/images/btc-ticker-esp8266.jpg)  
 original prototype
 
 ## components
@@ -56,7 +58,7 @@ these are the 3rd party designs I have tested for this project
 
 Case | Link | Remarks
 -----|-----|-----
-coinboard|https://www.thingiverse.com/thing:2785082 |Wemos D1 only, works okish with some hotglue
+coinboard|https://www.thingiverse.com/thing:2785082 |Wemos D1 only, works okish with some hotglue ([picture](docs/images/photo_coinboard_case.jpg))
 ESP8266 Matrix Display Case|https://www.thingiverse.com/thing:2885225| printed too small, pay attention to your matrix module size! mine was a little larger
 IR Remote Tester|https://www.thingiverse.com/thing:1413083|works good (I closed the sensor hole above the display) but screw mechanism needs rework or maybe screw inserts
 
