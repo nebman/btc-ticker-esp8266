@@ -9,14 +9,14 @@
 ![animation](https://thumbs.gfycat.com/VainBeautifulAcornwoodpecker-size_restricted.gif)  
 v0.2-bitstamp-websockets in action ([gfycat link](https://gfycat.com/gifs/detail/VainBeautifulAcornwoodpecker))
 
-![coinboard case](docs/images/photo_coinboard_case.jpg)
+![coinboard case](src/docs/images/photo_coinboard_case.jpg)
 3D printed coinboard case
 
-![picture](docs/images/btc-ticker-esp8266-matrix32.jpg)  
+![picture](src/docs/images/btc-ticker-esp8266-matrix32.jpg)  
 v0.3 with dot matrix display
 
 
-![picture](docs/images/btc-ticker-esp8266.jpg)  
+![picture](src/docs/images/btc-ticker-esp8266.jpg)  
 original prototype
 
 ## components
