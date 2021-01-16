@@ -1,7 +1,7 @@
 # Bitcoin price ticker with ESP8266 (realtime websockets)
 
 * 7-segment 8-bit - or - Dot Matrix LED Display support with 32x8px
-* bitstamp & bitfinex websocket interfacing for lightning fast, real time updates!
+* ~~bitstamp &~~ bitfinex websocket interfacing for lightning fast, real time updates!
 * solderless build possible (if you order the display with pre-soldered pin headers)
 * low power (<0.5W), cheap to build (around 5 EUR)
 

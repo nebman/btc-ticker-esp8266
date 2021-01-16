@@ -6,7 +6,7 @@
 // #define DEBUGGING
 
 // Set Display type, either SEGMENT7 or MATRIX32
-#define SEGMENT7
+//#define SEGMENT7
 //#define MATRIX32
 
 // Features MDNS, OTA
@@ -60,7 +60,7 @@ unsigned long timeout_flashing_dot = 0;
 unsigned int  timeout_reconnect_count = 0;
 
 #ifdef SEGMENT7
-  LedControl lc = LedControl(D7, D5, D8, 1);
+  LedControl lc = LedControl((int)D7, (int)D5, (int)D8, 1);
   unsigned int  timeout_swap_usdbtc = 0;
   boolean       usdbtc = false;
 #endif
@@ -142,11 +142,13 @@ void connect(boolean reconnect) {
 
   // connect to the server
   Serial.println("Client connecting...");
+  client.setInsecure();
   if (client.connect(exchange.host, exchange.port)) {
     Serial.println("WS Connected");
     setProgress(6);
   } else {
     Serial.println("WS Connection failed.");
+    delay(10000);
     reboot();
   }
 
@@ -330,7 +332,7 @@ void setAll(char c, boolean dot, int from, int len) {
     lc.setChar(0, i, c, dot);
   }
 }
-#endif SEGMENT7
+#endif
 
 
 void setDashes (int len = 4);
